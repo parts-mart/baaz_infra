@@ -1,0 +1,78 @@
+version: "3.8"
+services:
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.2
+    container_name: es
+    environment:
+      - node.name=es
+      - cluster.name=es-docker-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./data/es:/usr/share/elasticsearch/data
+      - ./logs/es:/usr/share/elasticsearch/logs
+    ports:
+      - 9200:9200
+
+  postgres:
+    image: postgres
+    container_name: postgres
+    volumes:
+      - ./data/pgdata:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+  pg_admin:
+    image: dpage/pgadmin4
+    container_name: pg_admin
+    ports:
+      - 5800:80
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=password
+    volumes:
+      - ./data/pgadmin:/var/lib/pgadmin
+      - ./data/servers.json:/pgadmin4/servers.json
+
+  umbrella:
+    build: 
+      context: ./baaz_umbrella
+    container_name: umbrella
+    depends_on:
+      - postgres
+      - es
+    environment:
+      # Variables to connect to our Postgres server
+      BAAZ_DATABASE_URL: postgres://postgres:postgres@db/baaz_dev
+      ELASTIC_SERCH_URL: elasticsearch:9200
+    links: 
+      - "es:elasticsearch"
+      - "postgres:db"
+    entrypoint: ["/bin/sh", "/app/entrypoint.sh"]
+    ports:
+      - 4000:4000
+
+  nginx:
+    image: nginx
+    container_name: nginx
+    network_mode: host
+    volumes:
+      - ./baaz_infra/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - umbrella
+
+volumes:
+  data:
+    driver: local
