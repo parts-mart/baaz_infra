@@ -30,6 +30,8 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+    stdin_open: true
+    tty: true
 
   pg_admin:
     image: dpage/pgadmin4
@@ -55,13 +57,12 @@ services:
     container_name: umbrella
     depends_on:
       - postgres
-      - es
     environment:
       # Variables to connect to our Postgres server
       BAAZ_DATABASE_URL: postgres://postgres:postgres@db/baaz_dev
       ELASTIC_SERCH_URL: elasticsearch:9200
+      SECRET_KEY_BASE: "${SECRET_KEY_BASE}"
     links: 
-      - "es:elasticsearch"
       - "postgres:db"
     entrypoint: ["/bin/sh", "/app/entrypoint.sh"]
     ports:
