@@ -1,3 +1,5 @@
+#!/bin/bash
+
 mkdir -p ../data/{es,pgadmin,pgdata}
 mkdir -p ../logs/es
 touch ../data/servers.json
